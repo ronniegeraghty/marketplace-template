@@ -13,7 +13,8 @@ stimuli:
   - name: authors-skill-and-evals
     prompt: >-
       Use skill-authoring to create skills/change-summary/SKILL.md and
-      evals/change-summary/eval.yaml. The new change-summary skill reads changes.txt,
+      evals/change-summary/eval.yaml relative to the active workspace root, not
+      the installed skill directory. The new change-summary skill reads changes.txt,
       counts its nonempty lines, and writes summary.json with a numeric count and an
       array of those lines named changes. Include a positive task case and an unrelated
       question that must not activate change-summary. Keep the eval outside the skill.

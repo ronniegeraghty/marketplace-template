@@ -3,13 +3,13 @@
   "owner": { "name": "Ronnie Geraghty" },
   "metadata": {
     "description": "Workflow-oriented examples with local tools and behavioral evaluations.",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "plugins": [
     {
       "name": "customization-authoring",
       "source": "./plugins/customization-authoring",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "Author a focused skill and meaningful evaluations."
     },
     {

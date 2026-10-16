@@ -107,8 +107,9 @@ executor. It selects the pinned full Copilot runtime through `COPILOT_CLI_PATH`.
 The SDK's bundled standalone runtime could discover our custom agent but
 rejected its execution with `custom_agent_prompt` unsupported. The full runtime
 supports real delegation and captured subagent evidence; the evals require both.
-The launcher also limits concurrency to two workers, disables automatic retries,
-and requests JUnit output. Per-case timeouts live in the specs.
+The launcher also limits concurrency to two workers, allows one bounded retry
+for a timeout or rate-limit failure, and requests JUnit output. It doesn't retry
+valid failed behavioral verdicts. Per-case timeouts live in the specs.
 
 The launcher resolves the stateless MCP bundle to an absolute path using Vally's
 `JSON_MCP_SERVER` parameter, so it doesn't depend on the runner's working

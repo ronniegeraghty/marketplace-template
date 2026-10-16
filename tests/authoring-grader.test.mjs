@@ -8,10 +8,16 @@ import { gradeAuthoring } from '../evals/graders/dist/authoring.mjs';
 import { vallyCliPath } from '../scripts/eval.mjs';
 import { projectRoot } from '../scripts/inventory.mjs';
 
-test('the actual relocated grader rejects missing, malformed, and invocation-only artifacts', async () => {
+test('the actual relocated grader rejects missing, misplaced, malformed, and invocation-only artifacts', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'marketplace grader test '));
   try {
     assert.equal((await gradeAuthoring(dir)).passed, false);
+    await mkdir(join(dir, 'skill-authoring/skills/change-summary'), { recursive: true });
+    await mkdir(join(dir, 'skill-authoring/evals/change-summary'), { recursive: true });
+    await writeFile(join(dir, 'skill-authoring/skills/change-summary/SKILL.md'),
+      '---\nname: change-summary\ndescription: Summarize changes.\n---\nRead changes.txt and write summary.json.');
+    await writeFile(join(dir, 'skill-authoring/evals/change-summary/eval.yaml'), 'name: change-summary\nstimuli: []\n');
+    assert.match((await gradeAuthoring(dir)).evidence, /Required generated skill or eval file is missing/);
     await mkdir(join(dir, 'skills/change-summary'), { recursive: true });
     await mkdir(join(dir, 'evals/change-summary'), { recursive: true });
     const skill = join(dir, 'skills/change-summary/SKILL.md');

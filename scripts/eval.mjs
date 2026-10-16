@@ -29,7 +29,7 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0] === 'grade' ? args.shift() : 'eval';
   const defaults = command === 'eval'
-    ? ['--workers', '2', '--max-retries', '0', '--junit', '--output-dir', 'vally-results']
+    ? ['--workers', '2', '--max-retries', '1', '--junit', '--output-dir', 'vally-results']
     : [];
   const child = spawn(process.execPath, [
     vallyCliPath, command, ...defaults,
