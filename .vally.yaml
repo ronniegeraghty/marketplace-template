@@ -8,6 +8,8 @@ paths:
   evalFilenames:
     - eval.yaml
   results: vally-results
+params:
+  JSON_MCP_SERVER: plugins/json-configuration/dist/server.mjs
 suites:
   pr:
     description: Real behavioral smoke coverage for every shipped customization

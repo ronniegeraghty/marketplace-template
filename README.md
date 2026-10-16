@@ -110,10 +110,16 @@ supports real delegation and captured subagent evidence; the evals require both.
 The launcher also limits concurrency to two workers, disables automatic retries,
 and requests JUnit output. Per-case timeouts live in the specs.
 
+The launcher resolves the stateless MCP bundle to an absolute path using Vally's
+`JSON_MCP_SERVER` parameter, so it doesn't depend on the runner's working
+directory. It also supplies the authoring grader with the pinned validator's
+absolute entry point rather than relying on npm having modified `PATH`.
+
 Vally writes a timestamped directory under `vally-results/` with `results.jsonl`,
 `eval-results.md`, JUnit, session logs, and trajectories. The authoring case also
-preserves its generated files. Re-grade saved evidence with `vally grade` instead
-of paying for another model run when only a grader changes.
+preserves its generated files. Re-grade saved evidence with
+`npm run eval:grade -- --help` to see Vally's grading options. This uses the same
+pinned tools without paying for another agent run when only a grader changes.
 
 The summary command checks completeness of the selected standard suite. To read
 an older run, pass `--run-dir PATH` alongside `--suite pr` or `--suite full`.
@@ -148,6 +154,8 @@ and [Vally's CI guide](https://microsoft.github.io/vally/get-started/add-to-ci/)
   and the CI check doesn't fail merely because a verdict misses its threshold.
 - **Operational errors:** configuration, authentication, execution, grader
   errors, missing results, and unexpected skips fail the check.
+  Runtime error events also fail it, even if the runner's outer record says
+  `success`; a failed MCP startup isn't a behavioral score.
 - **Fork PRs:** no credentialed live eval before merge. They receive deterministic
   checks; live evals run on `main` after merge. Never use `pull_request_target`
   to execute fork code with credentials.

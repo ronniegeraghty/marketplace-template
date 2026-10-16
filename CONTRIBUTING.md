@@ -56,9 +56,16 @@ only for grading. Its native tests exercise the distributed bundle, including
 invalid output controls. It runs the pinned Vally static validator for generated
 files; it doesn't launch another model.
 
+Use the repository launcher for evals and re-grading. It supplies
+`MARKETPLACE_VALLY_CLI` for that validator and an absolute `JSON_MCP_SERVER` Vally
+parameter for the stateless MCP executable. Don't assume that an MCP process
+starts in the trial workspace or that a direct CI `node` invocation has npm's
+binary directory on `PATH`. A grader infrastructure exception must return
+`status: error`, not an ordinary failed behavioral verdict.
+
 Inspect failed trajectories before changing assertions. Don't loosen a check
 simply to get green results, and don't replace a failed custom-agent launch with
-the default agent's answer. Use `vally grade --help` to re-grade saved runs.
+the default agent's answer. Use `npm run eval:grade -- --help` to re-grade saved runs.
 
 ## CI and authentication
 

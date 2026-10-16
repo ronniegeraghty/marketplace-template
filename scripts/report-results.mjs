@@ -24,10 +24,12 @@ export function summarize(records, expected) {
     if (!['success', 'error', 'skipped'].includes(record.status)) throw new Error(`Invalid outcome status for ${name}`);
     seen.add(name);
     const grade = record.gradeResult;
+    const runtimeErrors = (record.trajectory?.events ?? []).filter(event => event.type === 'error');
     let status;
-    if (record.status !== 'success' || !grade || graderError(grade)) {
+    if (record.status !== 'success' || !grade || graderError(grade) || runtimeErrors.length) {
       status = record.status === 'skipped' ? 'NOT EVALUATED' : 'ERROR';
-      errors.push(`${name}: ${record.error ?? record.skipReason ?? 'execution or grading did not produce a valid verdict'}`);
+      const runtimeMessage = runtimeErrors.map(event => event.data?.message ?? 'runtime error').join('; ');
+      errors.push(`${name}: ${record.error ?? record.skipReason ?? (runtimeMessage || 'execution or grading did not produce a valid verdict')}`);
     } else {
       if (typeof grade.passed !== 'boolean' || !Number.isFinite(grade.score) || grade.score < 0 || grade.score > 1) {
         throw new Error(`Invalid grade for ${name}`);

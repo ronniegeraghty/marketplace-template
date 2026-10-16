@@ -7367,8 +7367,8 @@ var require_dist = __commonJS({
 
 // evals/graders/src/authoring.mjs
 var import_yaml = __toESM(require_dist(), 1);
-import { readFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { readFile, access } from "node:fs/promises";
+import { resolve, dirname, isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 function verdict(issues) {
@@ -7411,13 +7411,15 @@ async function gradeAuthoring(workspace) {
   const skillPaths = spec.agent_environment?.skills ?? [];
   if (!Array.isArray(skillPaths) || !skillPaths.some((path) => typeof path === "string" && resolve(dirname(evalPath), path) === dirname(skillPath))) issues.push("Eval does not load the generated skill");
   if (!issues.length) {
+    const validator = process.env.MARKETPLACE_VALLY_CLI;
+    if (!validator || !isAbsolute(validator)) throw new Error("MARKETPLACE_VALLY_CLI must identify the pinned validator; use the repository eval launcher.");
+    await access(validator);
     const lint = spawnSync(
-      process.platform === "win32" ? "vally.cmd" : "vally",
-      ["lint", "skills", "--eval-spec", "evals/change-summary/eval.yaml", "--strict"],
+      process.execPath,
+      [validator, "lint", "skills", "--eval-spec", "evals/change-summary/eval.yaml", "--strict"],
       {
         cwd: workspace,
         encoding: "utf8",
-        shell: process.platform === "win32",
         env: { ...process.env, VALLY_TELEMETRY_OPTOUT: "1" },
         timeout: 3e4
       }
@@ -7428,8 +7430,20 @@ async function gradeAuthoring(workspace) {
   return verdict(issues);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  if (!process.env.EVALUATE_WORKSPACE) throw new Error("EVALUATE_WORKSPACE is required");
-  console.log(JSON.stringify(await gradeAuthoring(process.env.EVALUATE_WORKSPACE)));
+  try {
+    if (!process.env.EVALUATE_WORKSPACE) throw new Error("EVALUATE_WORKSPACE is required");
+    console.log(JSON.stringify(await gradeAuthoring(process.env.EVALUATE_WORKSPACE)));
+  } catch (error) {
+    console.log(JSON.stringify({
+      name: "generated-skill-contract",
+      kind: "code",
+      status: "error",
+      passed: false,
+      score: 0,
+      evidence: `Grader infrastructure failed: ${error instanceof Error ? error.message : String(error)}`
+    }));
+    process.exitCode = 1;
+  }
 }
 export {
   gradeAuthoring

@@ -12,6 +12,7 @@
     "eval:lint": "vally lint plugins --eval-spec evals --strict",
     "eval:pr": "node scripts/eval.mjs --suite pr",
     "eval": "node scripts/eval.mjs --suite full",
+    "eval:grade": "node scripts/eval.mjs grade",
     "verify": "npm run check && npm test && npm run eval:lint",
     "eval:report": "node scripts/report-results.mjs"
   },

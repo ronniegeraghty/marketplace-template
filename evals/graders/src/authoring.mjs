@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { readFile, access } from 'node:fs/promises';
+import { resolve, dirname, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { parseDocument } from 'yaml';
@@ -49,9 +49,12 @@ export async function gradeAuthoring(workspace) {
   if (!Array.isArray(skillPaths) || !skillPaths.some(path => typeof path === 'string' &&
       resolve(dirname(evalPath), path) === dirname(skillPath))) issues.push('Eval does not load the generated skill');
   if (!issues.length) {
-    const lint = spawnSync(process.platform === 'win32' ? 'vally.cmd' : 'vally',
-      ['lint', 'skills', '--eval-spec', 'evals/change-summary/eval.yaml', '--strict'], {
-        cwd: workspace, encoding: 'utf8', shell: process.platform === 'win32',
+    const validator = process.env.MARKETPLACE_VALLY_CLI;
+    if (!validator || !isAbsolute(validator)) throw new Error('MARKETPLACE_VALLY_CLI must identify the pinned validator; use the repository eval launcher.');
+    await access(validator);
+    const lint = spawnSync(process.execPath,
+      [validator, 'lint', 'skills', '--eval-spec', 'evals/change-summary/eval.yaml', '--strict'], {
+        cwd: workspace, encoding: 'utf8',
         env: { ...process.env, VALLY_TELEMETRY_OPTOUT: '1' }, timeout: 30000
       });
     if (lint.error) throw new Error(`Unable to run the pinned Vally validator: ${lint.error.message}`);
@@ -61,6 +64,15 @@ export async function gradeAuthoring(workspace) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  if (!process.env.EVALUATE_WORKSPACE) throw new Error('EVALUATE_WORKSPACE is required');
-  console.log(JSON.stringify(await gradeAuthoring(process.env.EVALUATE_WORKSPACE)));
+  try {
+    if (!process.env.EVALUATE_WORKSPACE) throw new Error('EVALUATE_WORKSPACE is required');
+    console.log(JSON.stringify(await gradeAuthoring(process.env.EVALUATE_WORKSPACE)));
+  } catch (error) {
+    console.log(JSON.stringify({
+      name: 'generated-skill-contract', kind: 'code', status: 'error',
+      passed: false, score: 0,
+      evidence: `Grader infrastructure failed: ${error instanceof Error ? error.message : String(error)}`
+    }));
+    process.exitCode = 1;
+  }
 }

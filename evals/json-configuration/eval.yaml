@@ -9,14 +9,11 @@ defaults:
 agent_environment:
   skills:
     - ../../plugins/json-configuration/skills/json-configuration
-  files:
-    - src: ../../plugins/json-configuration/dist/server.mjs
-      dest: tools/json-server.mjs
   mcpServers:
     json-configuration:
       type: stdio
       command: node
-      args: [tools/json-server.mjs]
+      args: ['${JSON_MCP_SERVER}']
 stimuli:
   - name: validates-and-reads-port
     prompt: >-

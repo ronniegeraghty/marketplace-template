@@ -26,8 +26,19 @@ test('execution, nested grader errors, and skips are not valid behavioral failur
     { status: 'error', stimulus: 'case-a', error: 'authentication failed' },
     { status: 'skipped', stimulus: 'case-a', skipReason: 'unsupported executor' },
     { ...outcome(), gradeResult: { passed: false, score: 0, details: [{ status: 'error', evidence: 'invalid grader' }] } },
+    { ...outcome(false), trajectory: { endReason: 'completed', events: [{ type: 'error', data: { type: 'mcp_server', message: 'MCP initialization failed' } }] } },
     { status: 'success', stimulus: 'case-a', gradeResult: null }
   ]) assert.equal(summarize([record], expected).errors.length, 1);
+});
+
+test('MCP initialization errors cannot masquerade as report-only behavioral failures', () => {
+  const record = {
+    ...outcome(false),
+    trajectory: { events: [{ type: 'error', data: { type: 'mcp_server', message: 'Server file not found' } }] }
+  };
+  const summary = summarize([record], expected);
+  assert.equal(summary.rows[0].status, 'ERROR');
+  assert.match(summary.errors[0], /Server file not found/);
 });
 
 test('empty, malformed, unknown, and partial result sets cannot report completion', () => {
