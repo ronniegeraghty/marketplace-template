@@ -1,7 +1,7 @@
 # Marketplace template
 
 A GitHub template for teams publishing their own Copilot plugin marketplace.
-The examples are organized by workflow, with behavioral evaluations for every
+The in-repo examples are organized by workflow, with behavioral evaluations for every
 skill, custom agent, and MCP tool.
 
 | Installable plugin | What it contains | Try it |
@@ -10,9 +10,31 @@ skill, custom agent, and MCP tool.
 | `code-review` | An adversarial-review skill and read-only reviewer agent | "Use adversarial-review to review this diff without changing it." |
 | `json-configuration` | A JSON usage skill and a self-contained local MCP server | 'Use json-configuration to validate {"port":8443} and look up /port.' |
 
-Each plugin works independently. There are no external plugin entries,
-hosted services, or external accounts required by the examples. Copilot itself
-and live evals require model access.
+Each example plugin works independently, without a hosted service or external
+account. The catalog also includes the optional remote GitHub Copilot Evals
+plugin below. Copilot itself and live evals require model access.
+
+## Remote plugins
+
+| Plugin | Upstream source | What it provides |
+| --- | --- | --- |
+| `evals` (GitHub Copilot Evals) | [github/evals](https://github.com/github/evals), `packages/plugin` | Create, review, improve, and run skills for eval workflows |
+
+After registering this marketplace, install it explicitly with:
+
+```sh
+copilot plugin install evals@marketplace-template
+```
+
+This is a reference to the upstream repository, not a vendored copy. The source
+is private, so installation requires a GitHub account with access to
+`github/evals`. Repository installs provide the source skills; the prebuilt
+canvas/MCP tooling and VS Code extension follow the upstream release and setup
+instructions.
+
+Local checks validate the remote reference's format without fetching or running
+it. The template's behavioral suites cover its three in-repo bundles, not the
+remote plugin's assets.
 
 ## Create your team's marketplace
 
@@ -22,8 +44,9 @@ and live evals require model access.
 2. In `.github/plugin/marketplace.json`, replace the marketplace `name` and
    `owner.name`. In each `plugins/*/plugin.json`, replace `repository`. Update this
    README's installation examples and review the MIT copyright notice.
-3. Keep catalog entries pointed at the local workflow directories. Add or remove
-   a whole workflow bundle rather than grouping all agents or all skills together.
+3. Keep example entries pointed at local workflow directories. Review optional
+   remote references and their access requirements separately. Add or remove a
+   whole workflow bundle rather than grouping all agents or all skills together.
 4. Run the development checks below, then commit and push your changes.
    Sharing this Git repository is publishing the marketplace; no registry service
    or organization-wide deployment is implied.
@@ -75,7 +98,7 @@ npm run verify
 ```
 
 - `build` regenerates the standalone MCP runtime, authoring grader, and licenses.
-- `check` validates schemas, local catalog sources, asset identities, eval
+- `check` validates schemas, local catalog sources, remote reference metadata, local asset identities, eval
   coverage, types, and generated-file freshness. It starts the local MCP server
   to discover its actual tool list; it doesn't contact a model.
 - `test` runs deterministic unit, protocol, relocation, coverage, and reporting
@@ -181,4 +204,5 @@ Bundled dependencies retain their notices beside the generated files.
 
 The structure and eval workflow were informed by the public
 [VS Code team marketplace](https://github.com/microsoft/vscode-team-kit).
-No private organizational skills or internal endpoints are included.
+The in-repo examples contain no private organizational code or internal
+endpoints. Remote plugin code remains in its upstream repository.

@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, cp, readFile, writeFile, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { inventory, projectRoot, frontmatter, contained, parseYaml } from '../scripts/inventory.mjs';
+import { inventory, projectRoot, frontmatter, contained, parseYaml, validateRemoteSource } from '../scripts/inventory.mjs';
 import { readEvals, checkCoverage } from '../scripts/coverage.mjs';
 
 test('catalog discovery and evals cover the real skills, agent, and both advertised MCP tools', async () => {
-  const { assets, catalog } = await inventory();
-  assert.equal(catalog.plugins.length, 3);
+  const { assets, catalog, localPlugins, remotePlugins } = await inventory();
+  assert.equal(catalog.plugins.length, 4);
+  assert.equal(localPlugins.length, 3);
+  assert.equal(remotePlugins.length, 1);
+  assert.equal(remotePlugins[0].name, 'evals');
+  assert.deepEqual(remotePlugins[0].source, { source: 'github', repo: 'github/evals', path: 'packages/plugin' });
   assert.deepEqual(assets.map(asset => asset.kind).sort(), ['agent', 'mcp', 'mcp', 'skill', 'skill', 'skill']);
   await checkCoverage(assets, await readEvals(projectRoot));
 });
@@ -42,9 +46,54 @@ test('a relocated template has no source-checkout or root node_modules dependenc
     await assert.rejects(contained(dir, '..'), /escapes/);
     const path = join(dir, '.github/plugin/marketplace.json');
     const catalog = JSON.parse(await readFile(path, 'utf8'));
-    catalog.plugins[0].source = { source: 'github', repo: 'example/external' };
+    catalog.plugins[0].source = { source: 'url', url: 'https://example.com/plugin.git' };
     await writeFile(path, JSON.stringify(catalog));
-    await assert.rejects(inventory(dir), /in-repo/);
+    await assert.rejects(inventory(dir), /invalid GitHub source/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('remote sources validate metadata without requiring an upstream checkout', () => {
+  for (const source of [
+    { source: 'github', repo: 'github/evals', path: 'packages/plugin' },
+    { source: 'github', repo: 'example/plugin', ref: 'main' },
+    { source: 'github', repo: 'example/plugin', sha: 'a'.repeat(40) }
+  ]) assert.equal(validateRemoteSource(source), source);
+  for (const source of [
+    null, [], { source: 'github' },
+    { source: 'url', repo: 'github/evals' },
+    { source: 'github', repo: 'https://github.com/github/evals' },
+    { source: 'github', repo: 'github/..' },
+    { source: 'github', repo: 'github/evals', sha: 'main' },
+    { source: 'github', repo: 'github/evals', ref: ' ' },
+    { source: 'github', repo: 'github/evals', unsupported: true }
+  ]) assert.throws(() => validateRemoteSource(source), /invalid GitHub source/);
+  for (const path of ['/packages/plugin', '../plugin', 'packages/../plugin', './plugin', 'packages\\plugin', 'C:/plugin', 'packages//plugin']) {
+    assert.throws(() => validateRemoteSource({ source: 'github', repo: 'github/evals', path }), /repository-relative/);
+  }
+});
+
+test('remote references do not replace local coverage or hide uncatalogued local plugins', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'marketplace remote metadata '));
+  try {
+    await mkdir(join(dir, '.github/plugin'), { recursive: true });
+    const catalog = JSON.parse(await readFile(join(projectRoot, '.github/plugin/marketplace.json'), 'utf8'));
+    const remote = catalog.plugins.find(plugin => plugin.name === 'evals');
+    catalog.plugins = [remote];
+    const path = join(dir, '.github/plugin/marketplace.json');
+    await writeFile(path, JSON.stringify(catalog));
+    const result = await inventory(dir);
+    assert.deepEqual(result.assets, []);
+    assert.deepEqual(result.localPlugins, []);
+    assert.deepEqual(result.remotePlugins, [remote]);
+    catalog.plugins.push(remote);
+    await writeFile(path, JSON.stringify(catalog));
+    await assert.rejects(inventory(dir), /duplicate plugin/);
+    catalog.plugins = [remote];
+    await writeFile(path, JSON.stringify(catalog));
+    await mkdir(join(dir, 'plugins/uncatalogued'), { recursive: true });
+    await assert.rejects(inventory(dir), /Plugin missing from marketplace/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

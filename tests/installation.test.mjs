@@ -1,16 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, cp, writeFile, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { projectRoot } from '../scripts/inventory.mjs';
+import { projectRoot, inventory, contained } from '../scripts/inventory.mjs';
 
-test('each workflow installs independently through the actual Copilot marketplace commands', { timeout: 120000 }, async () => {
-  const catalog = JSON.parse(await readFile(resolve(projectRoot, '.github/plugin/marketplace.json'), 'utf8'));
+test('local workflows install independently without fetching remote plugins', { timeout: 120000 }, async () => {
+  const { catalog, localPlugins } = await inventory();
   const loader = resolve(projectRoot, 'node_modules/@github/copilot/npm-loader.js');
-  for (const plugin of catalog.plugins) {
+  for (const plugin of localPlugins) {
     const home = await mkdtemp(join(tmpdir(), 'marketplace install '));
+    const source = join(home, 'source');
     const env = {
       ...process.env,
       COPILOT_HOME: home,
@@ -28,10 +29,15 @@ test('each workflow installs independently through the actual Copilot marketplac
       return result.stdout;
     };
     try {
+      await mkdir(join(source, '.github/plugin'), { recursive: true });
+      await writeFile(join(source, '.github/plugin/marketplace.json'), JSON.stringify({ ...catalog, plugins: localPlugins }));
+      for (const local of localPlugins) {
+        await cp(await contained(projectRoot, local.source), resolve(source, local.source), { recursive: true });
+      }
       const before = JSON.parse(run(['plugin', 'list', '--json']));
       assert.equal(before.filter(item => item.marketplace === catalog.name).length, 0,
         'The temporary client must not inherit installations from this marketplace');
-      run(['plugin', 'marketplace', 'add', projectRoot]);
+      run(['plugin', 'marketplace', 'add', source]);
       run(['plugin', 'install', `${plugin.name}@${catalog.name}`]);
       const installed = JSON.parse(run(['plugin', 'list', '--json']));
       assert.ok(Array.isArray(installed), 'Expected the documented flat plugin list');

@@ -24,8 +24,8 @@ skill and agent, a skill and MCP server, or only the components it needs.
 
 ## Coverage contract
 
-`npm run check` discovers the catalog, skill/agent files, and the running MCP
-server's real tool list. Every asset needs invocation plus outcome assertions,
+`npm run check` discovers the catalog, local skill/agent files, and the local MCP
+server's real tool list. Every in-repo asset needs invocation plus outcome assertions,
 a behavioral PR smoke case, and a negative control. A tag alone is not coverage.
 
 Use these `stimuli[].tags.assets` identity forms:
@@ -43,6 +43,36 @@ checks must stage the profile and require a `task` call with its `agent_type`,
 then grade captured subagent behavior. MCP checks must use `tool-calls` with
 the expected tool and actual result, not merely assert that the answer contains
 a number the model could guess.
+
+## Remote plugin references
+
+Add remote plugins to the same catalog `plugins` array using a GitHub source
+object, rather than copying their code into a local workflow bundle:
+
+```json
+{
+  "name": "evals",
+  "source": {
+    "source": "github",
+    "repo": "github/evals",
+    "path": "packages/plugin"
+  },
+  "description": "GitHub Copilot Evals skills."
+}
+```
+
+Confirm the install name and plugin directory against the upstream manifest.
+Omit `path` only when the plugin is at the repository root. Paths must be
+repository-relative without traversal or backslashes. Optional `ref` and
+full-commit `sha` fields can select an upstream revision; without either, the
+client uses the repository's default branch. Don't duplicate an upstream version
+in the catalog unless you also maintain that metadata.
+
+Document private-repository access and any separate runtime setup. Remote
+references receive metadata validation only; they aren't fetched, installed, or
+behaviorally evaluated by this repository's checks. Local installation tests use
+a local-only catalog fixture so fork CI needs no upstream access. The local
+asset coverage requirements remain unchanged.
 
 ## Graders and fixtures
 

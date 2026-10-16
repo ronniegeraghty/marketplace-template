@@ -11,8 +11,29 @@ export const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..'
 const ajv = new Ajv({ allErrors: true });
 const pluginSchema = ajv.compile(JSON.parse(await readFile(resolve(projectRoot, 'schemas/plugin.schema.json'), 'utf8')));
 const mcpSchema = ajv.compile(JSON.parse(await readFile(resolve(projectRoot, 'schemas/mcp.schema.json'), 'utf8')));
+const githubSourceSchema = ajv.compile({
+  type: 'object',
+  required: ['source', 'repo'],
+  additionalProperties: false,
+  properties: {
+    source: { const: 'github' },
+    repo: { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9-]*/(?!\\.{1,2}$)[A-Za-z0-9_.-]+$' },
+    path: { type: 'string', minLength: 1, pattern: '^[^\\u0000-\\u001f\\u007f]+$' },
+    ref: { type: 'string', minLength: 1, pattern: '\\S' },
+    sha: { type: 'string', pattern: '^[0-9a-fA-F]{40}$' }
+  }
+});
 const slug = /^(?!.*(?:--|\.\.))[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 const validName = value => typeof value === 'string' && value.length <= 64 && slug.test(value);
+
+export function validateRemoteSource(source, label = 'Remote plugin') {
+  if (!githubSourceSchema(source)) throw new Error(`${label}: invalid GitHub source: ${ajv.errorsText(githubSourceSchema.errors)}`);
+  if (source.path !== undefined && (
+    /[\\:]/.test(source.path) ||
+    source.path.split('/').some(part => !part || part === '.' || part === '..')
+  )) throw new Error(`${label}: remote path must be a canonical repository-relative directory`);
+  return source;
+}
 
 export function parseYaml(text, label) {
   const document = parseDocument(text, { uniqueKeys: true });
@@ -101,14 +122,22 @@ export async function inventory(root = projectRoot) {
     throw new Error('Marketplace needs a valid name, owner, and nonempty plugin list');
   }
   const assets = [];
+  const localPlugins = [];
+  const remotePlugins = [];
   const names = new Set();
   const sources = new Set();
   for (const entry of catalog.plugins) {
     if (!validName(entry.name) || names.has(entry.name)) throw new Error(`Invalid/duplicate plugin: ${entry.name}`);
     names.add(entry.name);
-    if (typeof entry.source !== 'string' || !entry.source.startsWith('./plugins/') || entry.source.includes('\\')) {
-      throw new Error(`${entry.name}: only in-repo ./plugins/ sources are permitted`);
+    if (typeof entry.source !== 'string') {
+      validateRemoteSource(entry.source, entry.name);
+      remotePlugins.push(entry);
+      continue;
     }
+    if (!entry.source.startsWith('./plugins/') || entry.source.includes('\\')) {
+      throw new Error(`${entry.name}: local sources must use ./plugins/ paths; remote sources need a GitHub source object`);
+    }
+    localPlugins.push(entry);
     const dir = await contained(root, entry.source);
     if (sources.has(dir)) throw new Error(`Duplicate plugin source: ${entry.source}`);
     sources.add(dir);
@@ -148,5 +177,5 @@ export async function inventory(root = projectRoot) {
     }
   }
   if (new Set(assets.map(asset => asset.id)).size !== assets.length) throw new Error('Duplicate asset identity');
-  return { catalog, assets };
+  return { catalog, assets, localPlugins, remotePlugins };
 }

@@ -3,7 +3,7 @@
   "owner": { "name": "Ronnie Geraghty" },
   "metadata": {
     "description": "Workflow-oriented examples with local tools and behavioral evaluations.",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "plugins": [
     {
@@ -23,6 +23,16 @@
       "source": "./plugins/json-configuration",
       "version": "0.1.0",
       "description": "Inspect JSON configuration using a skill and local MCP tools."
+    },
+    {
+      "name": "evals",
+      "source": {
+        "source": "github",
+        "repo": "github/evals",
+        "path": "packages/plugin"
+      },
+      "description": "GitHub Copilot Evals skills for creating, reviewing, improving, and running evals.",
+      "homepage": "https://github.com/github/evals"
     }
   ]
 }
