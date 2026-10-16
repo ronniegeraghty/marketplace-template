@@ -1,0 +1,19 @@
+paths:
+  skills:
+    - plugins/customization-authoring/skills
+    - plugins/code-review/skills
+    - plugins/json-configuration/skills
+  evals:
+    - evals
+  evalFilenames:
+    - eval.yaml
+  results: vally-results
+suites:
+  pr:
+    description: Real behavioral smoke coverage for every shipped customization
+    filter:
+      suite: pr
+  full:
+    description: Positive, negative, and boundary cases for all three workflow bundles
+    evals:
+      - evals/**/eval.yaml

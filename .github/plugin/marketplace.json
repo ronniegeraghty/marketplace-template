@@ -1,0 +1,28 @@
+{
+  "name": "marketplace-template",
+  "owner": { "name": "Ronnie Geraghty" },
+  "metadata": {
+    "description": "Workflow-oriented examples with local tools and behavioral evaluations.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "customization-authoring",
+      "source": "./plugins/customization-authoring",
+      "version": "0.1.0",
+      "description": "Author a focused skill and meaningful evaluations."
+    },
+    {
+      "name": "code-review",
+      "source": "./plugins/code-review",
+      "version": "0.1.0",
+      "description": "Read-only, evidence-backed review with a skill and specialist agent."
+    },
+    {
+      "name": "json-configuration",
+      "source": "./plugins/json-configuration",
+      "version": "0.1.0",
+      "description": "Inspect JSON configuration using a skill and local MCP tools."
+    }
+  ]
+}

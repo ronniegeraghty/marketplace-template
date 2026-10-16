@@ -1,0 +1,68 @@
+name: Behavioral evals
+on:
+  pull_request:
+    paths:
+      - plugins/**
+      - evals/**
+      - schemas/**
+      - scripts/**
+      - tests/**
+      - .vally.yaml
+      - package.json
+      - package-lock.json
+      - .github/workflows/**
+  push:
+    branches: [main]
+    paths:
+      - plugins/**
+      - evals/**
+      - schemas/**
+      - scripts/**
+      - tests/**
+      - .vally.yaml
+      - package.json
+      - package-lock.json
+      - .github/workflows/**
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: evals-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  evaluate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      copilot-requests: write
+    env:
+      VALLY_TELEMETRY_OPTOUT: '1'
+      EVAL_SUITE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.14.1'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run verify
+      - name: Run real behavioral evals
+        id: evaluate
+        run: node scripts/eval.mjs --suite "$EVAL_SUITE"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Report scores and require complete evidence
+        if: always() && steps.evaluate.outcome != 'skipped'
+        run: npm run eval:report -- --suite "$EVAL_SUITE"
+      - name: Save reports, trajectories, and JUnit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: behavioral-eval-results
+          path: vally-results/
+          retention-days: 14
+          if-no-files-found: warn
