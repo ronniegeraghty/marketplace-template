@@ -143,6 +143,8 @@ outside installed plugins; grader-only files use `grading_environment`.
 `checks.yml` runs credential-free checks on Linux and Windows for every PR.
 `evals.yml` runs the behavioral smoke suite on relevant same-repository PRs and
 the full suite on relevant `main` pushes or manual dispatch.
+Hosted evals use one model worker to limit simultaneous inference requests; the
+local launcher defaults to two. Graders and timeout/error handling are identical.
 
 The live job uses `GITHUB_TOKEN` with `copilot-requests: write`. For a personally
 owned repository, inference is billed to the owner's Copilot seat. An

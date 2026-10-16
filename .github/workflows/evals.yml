@@ -52,7 +52,7 @@ jobs:
       - run: npm run verify
       - name: Run real behavioral evals
         id: evaluate
-        run: node scripts/eval.mjs --suite "$EVAL_SUITE"
+        run: node scripts/eval.mjs --suite "$EVAL_SUITE" --workers 1
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Report scores and require complete evidence

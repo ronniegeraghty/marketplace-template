@@ -65,6 +65,7 @@ test('CI actually runs evals on trusted code and keeps credentials out of fork c
   assert.equal(evals.jobs.evaluate.permissions['copilot-requests'], 'write');
   const run = evals.jobs.evaluate.steps.find(step => step.id === 'evaluate');
   assert.match(run.run, /scripts\/eval\.mjs --suite/);
+  assert.match(run.run, /--workers 1/);
   assert.equal(run.env.GITHUB_TOKEN, '${{ github.token }}');
   assert.ok(evals.jobs.evaluate.steps.some(step => step.run?.includes('eval:report')));
   for (const step of evals.jobs.evaluate.steps) assert.equal(step['continue-on-error'], undefined);
